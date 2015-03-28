@@ -1,10 +1,13 @@
 package simpledb.file;
 
 import static simpledb.file.Page.BLOCK_SIZE;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.*;
+
+import simpledb.stats.BasicFileStats;
 
 /**
  * The SimpleDB file manager.
@@ -25,7 +28,7 @@ public class FileMgr {
    private File dbDirectory;
    private boolean isNew;
    private Map<String,FileChannel> openFiles = new HashMap<String,FileChannel>();
-
+   private Map<String,BasicFileStats> blockStatsFile = new HashMap<String,BasicFileStats>();
    /**
     * Creates a file manager for the specified database.
     * The database will be stored in a folder of that name
@@ -60,6 +63,7 @@ public class FileMgr {
          bb.clear();
          FileChannel fc = getFile(blk.fileName());
          fc.read(bb, blk.number() * BLOCK_SIZE);
+         this.updateReadBlockStats(blk, bb);
       }
       catch (IOException e) {
          throw new RuntimeException("cannot read block " + blk);
@@ -76,6 +80,7 @@ public class FileMgr {
          bb.rewind();
          FileChannel fc = getFile(blk.fileName());
          fc.write(bb, blk.number() * BLOCK_SIZE);
+         this.updateWriteBlockStats(blk, bb);
       }
       catch (IOException e) {
          throw new RuntimeException("cannot write block" + blk);
@@ -137,6 +142,27 @@ public class FileMgr {
          fc = f.getChannel();
          openFiles.put(filename, fc);
       }
+      if ( !this.blockStatsFile.containsKey(filename) ) {
+    	  this.blockStatsFile.put(filename, new BasicFileStats());
+      }
       return fc;
    }
+   
+   private void updateReadBlockStats(Block blk, ByteBuffer bb){
+	   blockStatsFile.get(blk.fileName()).blockReadIncrementer();
+   }
+   
+   private void updateWriteBlockStats(Block blk, ByteBuffer bb){
+	   blockStatsFile.get(blk.fileName()).blockWrittenIncrementer();
+   }
+   
+   public final Map<String,BasicFileStats> getMapStats(){
+	   return this.blockStatsFile;
+   }
+   
+   public final void resetMapStats(){
+	   this.blockStatsFile.clear();
+   }
+
+
 }

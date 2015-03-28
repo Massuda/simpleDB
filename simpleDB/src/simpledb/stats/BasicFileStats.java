@@ -27,6 +27,10 @@ public class BasicFileStats {
 	public void setBlockWritten(int blockWritten) {
 		this.blockWritten = blockWritten;
 	}
-	
 
+	@Override
+	public String toString() {
+		return "BasicFileStats [blockRead=" + blockRead + ", blockWritten="
+				+ blockWritten + "]";
+	}
 }

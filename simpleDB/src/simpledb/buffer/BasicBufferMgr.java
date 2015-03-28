@@ -123,13 +123,14 @@ class BasicBufferMgr {
 		long lastUnpin=this.bufferpool[0].getLastUnpinTimestamp();
 		Buffer buffLastUnpin=this.bufferpool[0];
 		int buffIndex=0;
-		for (int i=0; i<bufferpool.length; i++)
+		for (int i=0; i<bufferpool.length; i++){
 			if(bufferpool[i].getLastUnpinTimestamp()>lastUnpin){
 				lastUnpin=bufferpool[i].getLastUnpinTimestamp();
 				buffLastUnpin=bufferpool[i];
 				buffIndex=i;
 			}
-
+		}
+		lastReplacedPageIndex=buffIndex;
 		int buffSuccessor=this.getBufferSuccessorIndex(buffIndex);
 		if(buffSuccessor==-1)
 			return null;
@@ -149,6 +150,7 @@ class BasicBufferMgr {
 		}
 		return -1;
 	}
+
 
 	//private Buffer chooseUnpinnedBuffer_LRU(){ }
 }

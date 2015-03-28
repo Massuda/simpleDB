@@ -1,6 +1,9 @@
 package simpledb.remote;
 
+import simpledb.server.SimpleDB;
+import simpledb.stats.BasicFileStats;
 import simpledb.tx.Transaction;
+
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
@@ -19,6 +22,8 @@ class RemoteConnectionImpl extends UnicastRemoteObject implements RemoteConnecti
     */
    RemoteConnectionImpl() throws RemoteException {
       tx = new Transaction();
+      printAllBlockStats();
+      SimpleDB.fileMgr().resetMapStats();
    }
    
    /**
@@ -56,6 +61,7 @@ class RemoteConnectionImpl extends UnicastRemoteObject implements RemoteConnecti
    void commit() {
       tx.commit();
       tx = new Transaction();
+      printAllBlockStats();
    }
    
    /**
@@ -66,5 +72,15 @@ class RemoteConnectionImpl extends UnicastRemoteObject implements RemoteConnecti
       tx.rollback();
       tx = new Transaction();
    }
+   
+   private static void printBlockStats(String fileName, BasicFileStats fileStats){
+	   System.out.println("FileName: "+fileName+"  "+SimpleDB.fileMgr().getMapStats().get(fileName).toString());
+   }
+   
+   private static void printAllBlockStats(){
+	   for(String fileName: SimpleDB.fileMgr().getMapStats().keySet())
+		   System.out.println("FileName: "+fileName+"  "+SimpleDB.fileMgr().getMapStats().get(fileName).toString());
+   }
+
 }
 
