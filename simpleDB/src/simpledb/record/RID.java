@@ -37,6 +37,15 @@ public class RID {
 		return id;
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + blknum;
+		result = prime * result + id;
+		return result;
+	}
+
 	public boolean equals(Object obj) {
 		RID r = (RID) obj;
 		return blknum == r.blknum && id==r.id;
@@ -45,4 +54,6 @@ public class RID {
 	public String toString() {
 		return "[" + blknum + ", " + id + "]";
 	}
+	
+	
 }
