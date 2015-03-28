@@ -31,6 +31,7 @@ class BasicBufferMgr {
 		numAvailable = numbuffs;
 		for (int i=0; i<numbuffs; i++)
 			bufferpool[i] = new Buffer();
+		lastReplacedPageIndex = 0;
 	}
 
 	/**
@@ -55,6 +56,8 @@ class BasicBufferMgr {
 	synchronized Buffer pin(Block blk) {
 		Buffer buff = findExistingBuffer(blk);
 		if (buff == null) {
+			//TODO, change to implement Clock
+//			buff = chooseUnpinnedBuffer_Clock();
 			buff = chooseUnpinnedBuffer();
 			if (buff == null)
 				return null;
@@ -120,18 +123,8 @@ class BasicBufferMgr {
 	}
 
 	private Buffer chooseUnpinnedBuffer_Clock(){
-		long lastUnpin=this.bufferpool[0].getLastUnpinTimestamp();
-		Buffer buffLastUnpin=this.bufferpool[0];
-		int buffIndex=0;
-		for (int i=0; i<bufferpool.length; i++){
-			if(bufferpool[i].getLastUnpinTimestamp()>lastUnpin){
-				lastUnpin=bufferpool[i].getLastUnpinTimestamp();
-				buffLastUnpin=bufferpool[i];
-				buffIndex=i;
-			}
-		}
-		lastReplacedPageIndex=buffIndex;
-		int buffSuccessor=this.getBufferSuccessorIndex(buffIndex);
+		int buffSuccessor = this.getBufferSuccessorIndex(this.lastReplacedPageIndex);
+		
 		if(buffSuccessor==-1)
 			return null;
 
@@ -139,15 +132,17 @@ class BasicBufferMgr {
 	}
 
 	private int getBufferSuccessorIndex(int pageIndex){
-		int posizione=0;
+
 		for (int i=pageIndex; i<bufferpool.length; i++){
 			if(!bufferpool[i].isPinned())
 				return i;
 		}
+		
 		for (int i=0; i<pageIndex; i++){
 			if(!bufferpool[i].isPinned())
 				return i;
 		}
+		
 		return -1;
 	}
 
