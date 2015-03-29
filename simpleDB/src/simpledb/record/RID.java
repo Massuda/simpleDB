@@ -7,6 +7,7 @@ package simpledb.record;
  * @author Edward Sciore
  */
 public class RID {
+	public static final RID NULL = null;
 	private int blknum;
 	private int id;
 

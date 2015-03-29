@@ -10,7 +10,7 @@ import simpledb.file.*;
 class BasicBufferMgr {
 	private Buffer[] bufferpool;
 	private int numAvailable;
-	private int lastReplacedPageIndex; //variabile per la strategia che contiene l�ultimo indice di pagina usato
+	private int lastReplacedPageIndex; //variabile per la strategia che contiene l'ultimo indice di pagina usato
 
 
 	/**
@@ -56,7 +56,6 @@ class BasicBufferMgr {
 	synchronized Buffer pin(Block blk) {
 		Buffer buff = findExistingBuffer(blk);
 		if (buff == null) {
-			//TODO, change to implement Clock
 			buff = chooseUnpinnedBuffer_Clock();
 			//buff = chooseUnpinnedBuffer();
 			if (buff == null)
@@ -79,7 +78,8 @@ class BasicBufferMgr {
 	 * @return the pinned buffer
 	 */
 	synchronized Buffer pinNew(String filename, PageFormatter fmtr) {
-		Buffer buff = chooseUnpinnedBuffer();
+		//Buffer buff = chooseUnpinnedBuffer();
+		Buffer buff = chooseUnpinnedBuffer_Clock();
 		if (buff == null)
 			return null;
 		buff.assignToNew(filename, fmtr);
@@ -124,7 +124,7 @@ class BasicBufferMgr {
 
 	private Buffer chooseUnpinnedBuffer_Clock(){
 		int buffSuccessor = this.getBufferSuccessorIndex(this.lastReplacedPageIndex);
-		
+
 		if(buffSuccessor==-1)
 			return null;
 
@@ -133,19 +133,30 @@ class BasicBufferMgr {
 
 	private int getBufferSuccessorIndex(int pageIndex){
 
-		for (int i=pageIndex; i<bufferpool.length; i++){
+		/*for (int i=pageIndex; i<bufferpool.length; i++){
 			if(!bufferpool[i].isPinned())
 				return i;
 		}
-		
+
 		for (int i=0; i<pageIndex; i++){
 			if(!bufferpool[i].isPinned())
 				return i;
 		}
-		
+
+		return -1;
+	}*/
+		if(pageIndex == bufferpool.length - 1)
+			pageIndex = 0;
+
+		for(int i = (pageIndex + 1); i < bufferpool.length; i++) {
+			if(!bufferpool[i].isPinned()) {
+				return i;
+			}
+			if(i == bufferpool.length - 1)
+				i = 0;
+		}
 		return -1;
 	}
 
 
-	//private Buffer chooseUnpinnedBuffer_LRU(){ }
 }

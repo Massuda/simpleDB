@@ -21,7 +21,7 @@ public class Buffer {
    private int pins = 0;
    private int modifiedBy = -1;  // negative means not modified
    private int logSequenceNumber = -1; // negative means no corresponding log record
-   private long lastUnpinTimestamp; // per memorizzare il timestamp dell’unpin
+   private long lastUnpinTimestamp; // per memorizzare il timestamp dell'unpin
 
    /**
     * Creates a new buffer, wrapping a new 

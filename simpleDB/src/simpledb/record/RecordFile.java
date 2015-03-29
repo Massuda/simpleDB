@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import simpledb.file.Block;
+import simpledb.stats.BasicRecordStats;
 import simpledb.tx.Transaction;
-import simpledb.stats.*;
 
 /**
  * Manages a file of records.
@@ -19,11 +19,12 @@ public class RecordFile {
 	private String filename;
 	private RecordPage rp;
 	private int currentblknum;
-	private Map<RID,BasicRecordStats> statsRecord;
-	private RID lastReadRecord;
-	private RID lastWrittenRecord;
-
 	
+	//
+	private Map<RID,BasicRecordStats> statsRecord = new HashMap<RID,BasicRecordStats>(1000);
+	private RID lastReadRecord = RID.NULL;
+	private RID lastWrittenRecord = RID.NULL;
+
 	/**
 	 * Constructs an object to manage a file of records.
 	 * If the file does not exist, it is created.
@@ -34,7 +35,6 @@ public class RecordFile {
 		this.ti = ti;
 		this.tx = tx;
 		filename = ti.fileName();
-		this.statsRecord=new HashMap<RID,BasicRecordStats>();
 		if (tx.size(filename) == 0)
 			appendBlock();
 		moveTo(0);
@@ -77,6 +77,15 @@ public class RecordFile {
 	 * @return the integer value at that field
 	 */
 	public int getInt(String fldname) {
+		RID currentRid = this.currentRid();
+		BasicRecordStats brsCurrentStats = this.getStatBlock(currentRid);
+		brsCurrentStats.readFieldsRecordIncrementer();
+		if ( this.lastReadRecord == null || !this.lastReadRecord.equals(currentRid) ) {
+			brsCurrentStats.readRecordIncrementer();
+			this.lastReadRecord = currentRid;
+		}
+		
+		//
 		return rp.getInt(fldname);
 	}
 
@@ -87,6 +96,17 @@ public class RecordFile {
 	 * @return the string value at that field
 	 */
 	public String getString(String fldname) {
+		RID currentRid = this.currentRid();
+		
+		BasicRecordStats brsCurrentStats = this.getStatBlock(currentRid);
+		brsCurrentStats.readFieldsRecordIncrementer();
+		
+		if ( this.lastReadRecord == null || !this.lastReadRecord.equals(currentRid)) {
+			brsCurrentStats.readRecordIncrementer();
+			
+			this.lastReadRecord = currentRid;
+		}
+		//		
 		return rp.getString(fldname);
 	}
 
@@ -97,6 +117,14 @@ public class RecordFile {
 	 * @param val the new value for the field
 	 */
 	public void setInt(String fldname, int val) {
+		RID currentRid = this.currentRid();
+		BasicRecordStats brsCurrentStats = this.getStatBlock(currentRid);
+		brsCurrentStats.writtenFieldsRecordIncrementer();
+		if ( this.lastWrittenRecord == null || !this.lastWrittenRecord.equals(currentRid) ) {
+			brsCurrentStats.writtenRecordIncrementer();
+			this.lastWrittenRecord = currentRid;
+		}
+		//
 		rp.setInt(fldname, val);
 	}
 
@@ -107,6 +135,14 @@ public class RecordFile {
 	 * @param val the new value for the field
 	 */
 	public void setString(String fldname, String val) {
+		RID currentRid = this.currentRid();
+		BasicRecordStats brsCurrentStats = this.getStatBlock(currentRid);
+		brsCurrentStats.writtenFieldsRecordIncrementer();
+		if ( this.lastWrittenRecord == null || !this.lastWrittenRecord.equals(currentRid) ) {
+			brsCurrentStats.writtenRecordIncrementer();
+			this.lastWrittenRecord = currentRid;
+		}
+		
 		rp.setString(fldname, val);
 	}
 
@@ -118,6 +154,7 @@ public class RecordFile {
 	 * have unspecified behavior.
 	 */
 	public void delete() {
+		this.getStatBlock().writtenRecordIncrementer();
 		rp.delete();
 	}
 
@@ -129,8 +166,9 @@ public class RecordFile {
 	 */
 	public void insert() {
 		while (!rp.insert()) {
-			if (atLastBlock())
+			if (atLastBlock()) {
 				appendBlock();
+			}
 			moveTo(currentblknum + 1);
 		}
 	}
@@ -170,11 +208,24 @@ public class RecordFile {
 		RecordFormatter fmtr = new RecordFormatter(ti);
 		tx.append(filename, fmtr);
 	}
-	
-	public void statsRecordResetter(){
-		this.statsRecord.clear();
-	}
 
+	/* RecordFileStats */
+	
+	private BasicRecordStats getStatBlock() {
+		return getStatBlock(currentRid());
+	}
+	
+	private BasicRecordStats getStatBlock(RID curRid) {
+		BasicRecordStats brsCurrentStats = this.statsRecord.get(curRid);
+		
+		if ( brsCurrentStats == null ) {
+			brsCurrentStats = new BasicRecordStats();
+			this.statsRecord.put(curRid, brsCurrentStats);
+		}
+		
+		return brsCurrentStats;
+	}
+	
 	public Map<RID, BasicRecordStats> getStatsRecord() {
 		return statsRecord;
 	}
@@ -183,60 +234,11 @@ public class RecordFile {
 		this.statsRecord = statsRecord;
 	}
 
-	public TableInfo getTi() {
-		return ti;
-	}
-
-	public void setTi(TableInfo ti) {
-		this.ti = ti;
-	}
-
-	public Transaction getTx() {
-		return tx;
-	}
-
-	public void setTx(Transaction tx) {
-		this.tx = tx;
+	public void resetStatsRecord() {
+		this.statsRecord.clear();
 	}
 
 	public String getFilename() {
 		return filename;
-	}
-
-	public void setFilename(String filename) {
-		this.filename = filename;
-	}
-
-	public RecordPage getRp() {
-		return rp;
-	}
-
-	public void setRp(RecordPage rp) {
-		this.rp = rp;
-	}
-
-	public int getCurrentblknum() {
-		return currentblknum;
-	}
-
-	public void setCurrentblknum(int currentblknum) {
-		this.currentblknum = currentblknum;
-	}
-
-	public RID getLastReadRecord() {
-		return lastReadRecord;
-	}
-
-	public void setLastReadRecord(RID lastReadRecord) {
-		this.lastReadRecord = lastReadRecord;
-	}
-
-	public RID getLastWrittenRecord() {
-		return lastWrittenRecord;
-	}
-
-	public void setLastWrittenRecord(RID lastWrittenRecord) {
-		this.lastWrittenRecord = lastWrittenRecord;
-	}
-
+	}   
 }

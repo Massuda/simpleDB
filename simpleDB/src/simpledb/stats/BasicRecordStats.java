@@ -6,19 +6,19 @@ public class BasicRecordStats {
 	private int readFieldsRecord;
 	private int writtenFieldsRecord;
 	
-	public void readRecordIcrementer(){
+	public void readRecordIncrementer(){
 		this.readRecord++;
 	}
 	
-	public void writtenRecordIcrementer(){
+	public void writtenRecordIncrementer(){
 		this.writtenRecord++;
 	}
 	
-	public void readFieldsRecordIcrementer(){
+	public void readFieldsRecordIncrementer(){
 		this.readFieldsRecord++;
 	}
 	
-	public void writtenFieldsRecordIcrementer(){
+	public void writtenFieldsRecordIncrementer(){
 		this.writtenFieldsRecord++;
 	}
 	
