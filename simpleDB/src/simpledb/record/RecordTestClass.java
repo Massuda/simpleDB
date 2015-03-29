@@ -1,101 +1,193 @@
 package simpledb.record;
 
-import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Random;
-
-import simpledb.remote.SimpleDriver;
+import java.util.*;
 import simpledb.server.SimpleDB;
-
+import simpledb.stats.BasicFileStats;
+import simpledb.stats.BasicRecordStats;
+import simpledb.tx.Transaction;
 public class RecordTestClass {
-	/*
-	– Random randomNumberGenerator
-	– RandomStr randomStringGenerator (nuova classe per generare stringhe casuali)
-	– Il metodo main lancia i test
-	• Init new database
-	• Schema definition
-	• Table info
-	• Insert
-	• Read all records
-	• Delete half
-	• Read and calculate
-	• Insert again
-	• Read all records
-	– Metodi insert, read, delete
-	– Metodi per le statistiche
-	*/
 
-	public static void main(String[] args) {
-		Connection conn = null;
-		try {
-			// ?
-			SimpleDB.init("studentdb");
-			
-			Driver d = new SimpleDriver();
-			conn = d.connect("jdbc:simpledb://localhost", null);
-			Statement stmt = conn.createStatement();
+	private static String MATRICOLA="matricola";
+	private static String NOME= "nome";
+	private static String NUMERO_RANDOM= "randomNumber";
+	private static long READ_BLOCK=0;
+	private static long WRITTEN_BLOCK=0;
+	private static Random randomNumber = new Random();
+	private static RandomStr randomString= new RandomStr();
 
-			String s = "create table STUDENT(SId int, SName varchar(10), MajorId int, GradYear int)";
-			stmt.executeUpdate(s);
-			System.out.println("Table STUDENT created.");
 
-			s = "insert into STUDENT(SId, SName, MajorId, GradYear) values ";
-			
-			int numberStudent = 10000;
-			s = "insert into STUDENT(SId, SName, MajorId, GradYear) values ";
-			for (int i=1; i<=numberStudent; i++)
-				stmt.executeUpdate(s + createRandomStudent(i));
-			System.out.println("STUDENT records inserted.");
+	public static void main(String [] args) {
+
+		SimpleDB.init("studentDB");
+		Schema schemaTable= new Schema();
+		schemaTable.addIntField(MATRICOLA);
+		schemaTable.addStringField(NOME, 20);
+		schemaTable.addIntField(NUMERO_RANDOM);
+		TableInfo tableInfo= new TableInfo("studenti",schemaTable);
+		SimpleDB.fileMgr().resetMapStats();
+
+		insertStudents(tableInfo,10000);
+		SimpleDB.fileMgr().resetMapStats();
+		readStudents(tableInfo);
+		SimpleDB.fileMgr().resetMapStats();
+		deleteStudents(tableInfo,10000/2);
+		SimpleDB.fileMgr().resetMapStats();
+		readStudentsCalculate(tableInfo);
+		SimpleDB.fileMgr().resetMapStats();
+		insertStudents(tableInfo,7000);
+		SimpleDB.fileMgr().resetMapStats();
+		readStudents(tableInfo);
+		SimpleDB.fileMgr().resetMapStats();
+
+		System.out.println("\n");
+		System.out.println("Accessi totali al disco: "+ (READ_BLOCK+WRITTEN_BLOCK));
+	}
+
+	private static void insertStudents(TableInfo table, int qty) {
+		Transaction tx= new Transaction();
+		RecordFile rfTable= new RecordFile(table,tx);
+
+		for(int i=0; i<qty; i++){
+			rfTable.insert();
+			rfTable.setInt(MATRICOLA, i);
+			rfTable.setString(NOME, randomString.get(20));
+			rfTable.setInt(NUMERO_RANDOM,randomNumber.nextInt(qty));
 
 		}
-		catch(SQLException e) {
-			e.printStackTrace();
-		}
-		finally {
-			try {
-				if (conn != null)
-					conn.close();
+		printRecordStats(rfTable);
+		printBlockStats(rfTable.getFilename());
+		rfTable.close();
+		tx.commit();
+	}
+
+	private static void readStudents(TableInfo table) {
+		Transaction tx = new Transaction();
+		RecordFile rfTable= new RecordFile(table,tx);
+		rfTable.next();
+
+		do {
+			rfTable.getInt(MATRICOLA);
+			rfTable.getString(NOME);
+			rfTable.getInt(NUMERO_RANDOM);
+		} while (rfTable.next());
+
+		printRecordStats(rfTable);
+		printBlockStats(rfTable.getFilename());
+		rfTable.close();
+		tx.commit();
+
+	}
+	private static void deleteStudents(TableInfo table, int studentQuality) {
+		Transaction tx= new Transaction();
+		RecordFile rfTable= new RecordFile(table,tx);
+		rfTable.next();
+		do {
+			if(rfTable.getInt(MATRICOLA)>studentQuality) {
+				rfTable.delete();
 			}
-			catch (SQLException e) {
-				e.printStackTrace();
-			}
 		}
+		while (rfTable.next());
+
+		printRecordStats(rfTable);
+		printBlockStats(rfTable.getFilename());
+		rfTable.close();
+		tx.commit();
+
+
+
 	}
 
-	private static String createRandomStudent(int i) {
-//		"(1, 'joe', 10, 2004)"
-		String s = "(" + i + ", " + generateName() + ", " + generateNumber() + ", " + generateYear() + ")";		
-		return s;
-	}
-	
-	private static String generateName() {
-		char[] chars = "abcdefghijklmnopqrstuvwxyz".toCharArray();
-		StringBuilder sb = new StringBuilder();
-		sb.append("'");
-		Random random = new Random();
-		for (int i = 0; i < 8; i++) {
-		    char c = chars[random.nextInt(chars.length)];
-		    sb.append(c);
-		}
-		sb.append("'");
-		String output = sb.toString();
-		return output;
-	}
-	
-	private static int generateNumber() {
-		Random r = new Random();
-		int low = 1;
-		int high = 30;
-		return r.nextInt(high-low) + low;
-	}
-	
-	private static int generateYear() {
-		Random r = new Random();
-		int low = 1980;
-		int high = 2000;
-		return r.nextInt(high-low) + low;
+	private static void readStudentsCalculate(TableInfo table){
+		Transaction tx= new Transaction();
+		RecordFile rfTable= new RecordFile(table,tx);
+		long sumCasuale=0;
+		int studentsCount=0;
+		rfTable.next();
+		do {
+			sumCasuale+=rfTable.getInt(NUMERO_RANDOM);
+			studentsCount+=1;
+		} while(rfTable.next());
+		System.out.println("AVG: "+sumCasuale/studentsCount);
+		printRecordStats(rfTable);
+		printBlockStats(rfTable.getFilename());
+		rfTable.close();
+		tx.commit();
 	}
 
+	private static void printRecordStats(RecordFile rfTable){
+		Map<RID,BasicRecordStats> statsMap= rfTable.getStatsRecord();
+		long totalRecordRead=0;
+		long totalRecordWritten=0;
+		long totalRecordFieldRead=0;
+		long totalRecordFieldWritten=0;
+		System.out.println("\n");
+		for(RID recordIDStats: statsMap.keySet()){
+			BasicRecordStats currStats=statsMap.get(recordIDStats);
+			totalRecordRead+=currStats.getReadFieldsRecord();
+			totalRecordWritten+= currStats.getWrittenFieldsRecord();
+		}
+		System.out.println("Record read "+totalRecordRead);
+		System.out.println("Record written "+totalRecordWritten);
+	}
+
+	private static void printAllBlockStats(){
+		Map<String,BasicFileStats> statsMap=
+				SimpleDB.fileMgr().getMapStats();
+		long totalBlockRead=0;
+		long totalBlockWritten=0;
+		System.out.println("\n");
+		//System.out.println("FILENAME\t\tBLK R\tBLK W");
+		for(String fileName: statsMap.keySet()) {
+			BasicFileStats bTemp=statsMap.get(fileName);
+			totalBlockRead+=bTemp.getBlockRead();
+			totalBlockWritten+=bTemp.getBlockWritten();
+			printBlockStats(fileName,bTemp);
+			System.out.println("+\n");
+			System.out.println("total\t\t "+totalBlockRead+ "\t"+totalBlockWritten);
+
+
+
+		}
+
+
+	}
+	private static void printBlockStats(String fileName) {
+		if(SimpleDB.fileMgr().getMapStats().containsKey(fileName)) {
+			printBlockStats(fileName,SimpleDB.fileMgr().getMapStats().get(fileName));
+		}
+	}
+	private static void printBlockStats(String fileName,BasicFileStats fileStats){
+		System.out.println("Blocks read: "+fileStats.getBlockRead());
+		System.out.println("Blocks written: "+fileStats.getBlockWritten());
+		READ_BLOCK+= fileStats.getBlockRead();
+		WRITTEN_BLOCK+= fileStats.getBlockWritten();
+	}
+}
+class RandomStr {
+	private final char[] alphanumeric = alphanumeric();
+	private final Random rand;
+	public RandomStr(){
+		this(null);
+	}
+	public RandomStr(Random rand){
+		this.rand=(rand!=null) ?  rand : new Random();
+	}
+	public String get(int len){
+		StringBuffer out = new StringBuffer();
+		while(out.length() < len){
+			int idx=Math.abs((rand.nextInt() % alphanumeric.length));
+			out.append(alphanumeric[idx]);
+		}
+		return out.toString();
+	}
+	private char[] alphanumeric(){
+		StringBuffer buf=new StringBuffer(128);
+		for(int i=65;  i<=90; i++){
+			buf.append((char) i);
+		}
+		for(int i=97;  i<=122; i++){
+			buf.append((char) i);
+		}
+		return buf.toString().toCharArray();
+	}
 }

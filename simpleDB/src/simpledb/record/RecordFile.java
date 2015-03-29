@@ -183,6 +183,46 @@ public class RecordFile {
 		this.statsRecord = statsRecord;
 	}
 
+	public TableInfo getTi() {
+		return ti;
+	}
+
+	public void setTi(TableInfo ti) {
+		this.ti = ti;
+	}
+
+	public Transaction getTx() {
+		return tx;
+	}
+
+	public void setTx(Transaction tx) {
+		this.tx = tx;
+	}
+
+	public String getFilename() {
+		return filename;
+	}
+
+	public void setFilename(String filename) {
+		this.filename = filename;
+	}
+
+	public RecordPage getRp() {
+		return rp;
+	}
+
+	public void setRp(RecordPage rp) {
+		this.rp = rp;
+	}
+
+	public int getCurrentblknum() {
+		return currentblknum;
+	}
+
+	public void setCurrentblknum(int currentblknum) {
+		this.currentblknum = currentblknum;
+	}
+
 	public RID getLastReadRecord() {
 		return lastReadRecord;
 	}

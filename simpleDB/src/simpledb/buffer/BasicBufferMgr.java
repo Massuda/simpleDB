@@ -10,7 +10,7 @@ import simpledb.file.*;
 class BasicBufferMgr {
 	private Buffer[] bufferpool;
 	private int numAvailable;
-	private int lastReplacedPageIndex; //variabile per la strategia che contiene l’ultimo indice di pagina usato
+	private int lastReplacedPageIndex; //variabile per la strategia che contiene lï¿½ultimo indice di pagina usato
 
 
 	/**
@@ -57,8 +57,8 @@ class BasicBufferMgr {
 		Buffer buff = findExistingBuffer(blk);
 		if (buff == null) {
 			//TODO, change to implement Clock
-//			buff = chooseUnpinnedBuffer_Clock();
-			buff = chooseUnpinnedBuffer();
+			buff = chooseUnpinnedBuffer_Clock();
+			//buff = chooseUnpinnedBuffer();
 			if (buff == null)
 				return null;
 			buff.assignToBlock(blk);
